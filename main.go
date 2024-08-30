@@ -15,7 +15,10 @@ var (
 
 	serverAddr = flag.String("serverAddr", ":3000", "Server address to listen on or connect to")
 
-	proxyAddr = flag.String("proxyAddr", ":4455", "proxy address to tunnel")
+	proxyAddr = flag.String("proxyAddr", ":4455", "Proxy address to tunnel")
+
+	// Shared secret for handshake
+	secret = flag.String("secret", "mySecretKey", "Secret key for client-server handshake")
 )
 
 var (
@@ -47,8 +50,39 @@ func runClient() error {
 		}
 
 		defer conn.Close()
+
+		fmt.Println("checking creds")
+		// Perform the handshake with the server
+		if err := performHandshake(conn); err != nil {
+			fmt.Printf("Handshake failed: %v\n", err)
+			conn.Close()
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
 		handleClientConnection(conn)
+		fmt.Println("creds matched")
 	}
+}
+
+func performHandshake(conn net.Conn) error {
+	// Send the secret to the server
+	if _, err := conn.Write([]byte(*secret + "\n")); err != nil {
+		return fmt.Errorf("failed to send secret: %v", err)
+	}
+
+	// Wait for the server to confirm the handshake
+	response := make([]byte, len("OK\n"))
+	if _, err := io.ReadFull(conn, response); err != nil {
+		return fmt.Errorf("failed to read handshake response: %v", err)
+	}
+
+	if string(response) != "OK\n" {
+		return fmt.Errorf("invalid handshake response: %s", string(response))
+	}
+
+	fmt.Println("handshake success")
+	return nil
 }
 
 func handleClientConnection(conn net.Conn) {
@@ -149,10 +183,37 @@ func listenForClient() {
 			continue
 		}
 
+		// Perform the handshake with the client
+		if err := validateHandshake(conn); err != nil {
+			log.Printf("Handshake failed: %v", err)
+			conn.Close()
+			continue
+		}
+
 		clientConnMutex.Lock()
 		clientConn = conn
 		clientConnMutex.Unlock()
 
 		log.Println("Client connected")
 	}
+}
+
+func validateHandshake(conn net.Conn) error {
+	// Read the secret from the client
+	receivedSecret := make([]byte, len(*secret)+1)
+	if _, err := io.ReadFull(conn, receivedSecret); err != nil {
+		return fmt.Errorf("failed to read secret: %v", err)
+	}
+
+	// Validate the secret
+	if string(receivedSecret) != *secret+"\n" {
+		return fmt.Errorf("invalid secret: %s", string(receivedSecret))
+	}
+
+	// Send confirmation back to the client
+	if _, err := conn.Write([]byte("OK\n")); err != nil {
+		return fmt.Errorf("failed to send handshake confirmation: %v", err)
+	}
+
+	return nil
 }
