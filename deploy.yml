@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-tunnel-deployment
+  labels:
+    app: go-tunnel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-tunnel
+  template:
+    metadata:
+      labels:
+        app: go-tunnel
+    spec:
+      containers:
+      - name: go-tunnel
+        image: ghcr.io/kloudlite/extra/proxy:v1.0.0-nightly
+        ports:
+        - containerPort: 3000
+        - containerPort: 4455
+        commands:
+        - --mode=server
+        resources:
+          limits:
+            memory: 10Mi
+            cpu: 10m
+          requests:
+            memory: 10Mi
+            cpu: 10m
+
+      tolerations:
+      - operator: Exists
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-tunnel-service
+spec:
+  type: NodePort
+  selector:
+    app: go-tunnel
+  ports:
+  - port: 3000
+    name: main
+    targetPort: 3000
+    protocol: TCP
+    nodePort: 32000  # NodePort for the main server port
+  - port: 4455
+    name: proxy
+    targetPort: 4455
+    protocol: TCP
+    nodePort: 32001  # NodePort for the proxy port
