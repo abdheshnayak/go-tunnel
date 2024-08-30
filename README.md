@@ -21,5 +21,5 @@ GoTunnel is a lightweight Go program that allows you to expose a local WebSocket
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/GoTunnel.git
+   git clone https://github.com/abdheshnayak/GoTunnel.git
    cd GoTunnel
