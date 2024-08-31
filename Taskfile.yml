@@ -3,7 +3,7 @@ version: 3
 tasks:
   default:
     cmds:
-      - nodemon -q -e 'go' --signal SIGTERM --exec "echo '# building' && task build && echo '# build success' && task run || exit"
+      - nodemon -q -e 'go' --signal SIGTERM --exec "echo '# building' && task build && echo '# build success' || exit"
 
   build:
     cmds:
@@ -11,7 +11,15 @@ tasks:
 
   run:
     cmds:
-      - ./bin/app -mode=client -proxyAddr=192.168.13.254:4455 -serverAddr=gcp-dev.kloudlite.io:32000
+      - ./bin/app -mode=client -proxyAddr=localhost:1234 -serverAddr=gcp-dev.kloudlite.io:32000
+      # - ./bin/app -mode=client -proxyAddr=192.168.13.254:4455 -serverAddr=gcp-dev.kloudlite.io:32000
+
+  local:
+    cmds:
+      - ./bin/app -mode=client -proxyAddr=192.168.13.254:4455
+  server:
+    cmds:
+      - ./bin/app -mode=server -proxyAddr=:4456
   
 
   docker:build:local:
