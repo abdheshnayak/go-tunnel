@@ -69,7 +69,7 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				return
 			}
 
-			fmt.Println("sent message for: ", msg.Id, string(msg.Msg))
+			fmt.Println("sent message for: ", msg.Id)
 		}
 	}(&mctx)
 
@@ -93,8 +93,6 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
-			fmt.Println("read: ", string(buf[:n]))
-
 			var msg types.Message
 			err = msg.FromBytes(buf[:n])
 			if err != nil {
@@ -102,7 +100,7 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
-			fmt.Println("received message for: ", msg.Id, string(msg.Msg))
+			fmt.Println("received message for: ", msg.Id)
 			receive <- msg
 		}
 	}(&mctx)

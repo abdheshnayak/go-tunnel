@@ -58,7 +58,7 @@ func Dial(serverAddr *string) (chan types.Message, chan types.Message, net.Conn,
 				continue
 			}
 
-			fmt.Println("received message from: ", msg.Id, string(msg.Msg))
+			fmt.Println("received message from: ", msg.Id)
 			receive <- msg
 		}
 	}()
@@ -68,7 +68,7 @@ func Dial(serverAddr *string) (chan types.Message, chan types.Message, net.Conn,
 	go func() {
 		for {
 			msg := <-send
-			fmt.Println("sending message to: ", msg.Id, string(msg.Msg))
+			fmt.Println("sending message to: ", msg.Id)
 			if conn == nil {
 				fmt.Println("connection is nil")
 				time.Sleep(1 * time.Second)

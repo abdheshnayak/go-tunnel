@@ -60,7 +60,6 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 				for {
 					msg := <-receive
 
-					// fmt.Println("msg:", msg.String())
 					switch msg.Type {
 					case types.MessageTypeResponse:
 						conn, ok := conns[msg.Id]

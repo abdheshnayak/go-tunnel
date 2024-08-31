@@ -91,7 +91,6 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 							continue
 						}
 
-						fmt.Println("read: ", string(buf[:n]))
 						respMsg <- types.Message{Id: msg.Id, Msg: buf[:n], Type: types.MessageTypeResponse}
 					}
 				}()
