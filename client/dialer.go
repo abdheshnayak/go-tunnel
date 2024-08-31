@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"proxy.io/consts"
 	"proxy.io/types"
 )
+
+var mu sync.Mutex
 
 func Dial(serverAddr *string) (chan types.Message, chan types.Message, net.Conn, error) {
 	send := make(chan types.Message)
@@ -55,7 +58,7 @@ func Dial(serverAddr *string) (chan types.Message, chan types.Message, net.Conn,
 				continue
 			}
 
-			fmt.Println("received message from: ", msg.Id)
+			fmt.Println("received message from: ", msg.Id, string(msg.Msg))
 			receive <- msg
 		}
 	}()
@@ -64,27 +67,28 @@ func Dial(serverAddr *string) (chan types.Message, chan types.Message, net.Conn,
 
 	go func() {
 		for {
-			select {
-			case msg := <-send:
-				fmt.Println("sending message to: ", msg.Id)
-				if conn == nil {
-					fmt.Println("connection is nil")
-					time.Sleep(1 * time.Second)
-					continue
-				}
+			msg := <-send
+			fmt.Println("sending message to: ", msg.Id, string(msg.Msg))
+			if conn == nil {
+				fmt.Println("connection is nil")
+				time.Sleep(1 * time.Second)
+				continue
+			}
 
-				data, err := msg.Bytes()
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
+			data, err := msg.Bytes()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
 
-				_, err = conn.Write(data)
+			mu.Lock()
+			_, err = conn.Write(data)
+			time.Sleep(1 * time.Millisecond)
+			mu.Unlock()
 
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
+			if err != nil {
+				fmt.Println(err)
+				continue
 			}
 		}
 	}()

@@ -1,9 +1,18 @@
 package egob
 
 import (
+	// "encoding/json"
 	"bytes"
 	"encoding/gob"
 )
+
+// func Marshal(v interface{}) ([]byte, error) {
+// 	return json.Marshal(v)
+// }
+//
+// func Unmarshal(data []byte, v interface{}) error {
+// 	return json.Unmarshal(data, v)
+// }
 
 func Marshal(v interface{}) ([]byte, error) {
 	var buf bytes.Buffer

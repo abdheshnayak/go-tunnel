@@ -58,8 +58,6 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
-			fmt.Println("sending message for: ", msg.Id)
-
 			if ctx.conn == nil {
 				fmt.Println("write connection is nil")
 				time.Sleep(1 * time.Second)
@@ -71,6 +69,7 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				return
 			}
 
+			fmt.Println("sent message for: ", msg.Id, string(msg.Msg))
 		}
 	}(&mctx)
 
@@ -89,8 +88,12 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 					fmt.Println("connection closed")
 					ctx.conn = nil
 				}
+
+				fmt.Println(err, "read error")
 				continue
 			}
+
+			fmt.Println("read: ", string(buf[:n]))
 
 			var msg types.Message
 			err = msg.FromBytes(buf[:n])
@@ -99,7 +102,7 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
-			fmt.Println("received message for: ", msg.Id)
+			fmt.Println("received message for: ", msg.Id, string(msg.Msg))
 			receive <- msg
 		}
 	}(&mctx)

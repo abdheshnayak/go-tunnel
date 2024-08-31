@@ -2,14 +2,13 @@ package client
 
 import (
 	"fmt"
+	"io"
 	"net"
-	"sync"
+	"time"
 
 	"proxy.io/consts"
 	"proxy.io/types"
 )
-
-var sendLock sync.Mutex
 
 func Run(ctx types.Context) error {
 	send, receive, conn, err := Dial(&ctx.ServerAddr)
@@ -26,10 +25,10 @@ func Run(ctx types.Context) error {
 	for {
 		select {
 		case response := <-respMsg:
-			fmt.Println("sent message to: ", string(response.Msg))
+			// fmt.Println("sent message to: ", string(response.Id))
 			send <- response
 		case msg := <-receive:
-			fmt.Println("rc message from: ", string(msg.Msg))
+			// fmt.Println("rc message from: ", string(msg.Id))
 			reqMsg <- msg
 		}
 	}
@@ -79,16 +78,21 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 						buf := make([]byte, consts.ProxyPayloadSize)
 						n, err := c.Read(buf)
 						if err != nil {
-							fmt.Println(err)
-							sendLock.Lock()
-							respMsg <- types.Message{Id: msg.Id, Msg: []byte("error"), Type: types.MessageTypeClose}
-							sendLock.Unlock()
-							return
+							if err == io.EOF {
+								buf = make([]byte, consts.ProxyPayloadSize)
+								fmt.Println("connection closed, eof")
+
+								time.After(time.Second)
+								respMsg <- types.Message{Id: msg.Id, Msg: []byte("error"), Type: types.MessageTypeClose}
+								time.After(time.Second)
+								return
+							}
+
+							continue
 						}
 
-						sendLock.Lock()
+						fmt.Println("read: ", string(buf[:n]))
 						respMsg <- types.Message{Id: msg.Id, Msg: buf[:n], Type: types.MessageTypeResponse}
-						sendLock.Unlock()
 					}
 				}()
 			}
@@ -98,7 +102,6 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 	go func() {
 		for {
 			select {
-
 			case req := <-reqMsg:
 				// send request to proxy
 				conn, err := getDial(req.Id)
@@ -109,21 +112,11 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 
 				readConn <- req
 
-				sendLock.Lock()
 				_, err = conn.Write([]byte(req.Msg))
-				sendLock.Unlock()
 				if err != nil {
 					continue
 				}
 
-				// buf := make([]byte, consts.ProxyPayloadSize)
-				// n, err := conn.Read(buf)
-				// if err != nil {
-				// 	fmt.Println(err)
-				// 	return
-				// }
-				//
-				// respMsg <- types.Message{Id: req.Id, Msg: buf[:n], Type: types.MessageTypeResponse}
 			}
 
 		}
