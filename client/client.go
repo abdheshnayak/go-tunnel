@@ -3,10 +3,13 @@ package client
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"proxy.io/consts"
 	"proxy.io/types"
 )
+
+var sendLock sync.Mutex
 
 func Run(ctx types.Context) error {
 	send, receive, conn, err := Dial(&ctx.ServerAddr)
@@ -77,10 +80,15 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 						n, err := c.Read(buf)
 						if err != nil {
 							fmt.Println(err)
+							sendLock.Lock()
+							respMsg <- types.Message{Id: msg.Id, Msg: []byte("error"), Type: types.MessageTypeClose}
+							sendLock.Unlock()
 							return
 						}
 
+						sendLock.Lock()
 						respMsg <- types.Message{Id: msg.Id, Msg: buf[:n], Type: types.MessageTypeResponse}
+						sendLock.Unlock()
 					}
 				}()
 			}
@@ -99,22 +107,23 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 					continue
 				}
 
-				// readConn <- req
+				readConn <- req
 
+				sendLock.Lock()
 				_, err = conn.Write([]byte(req.Msg))
+				sendLock.Unlock()
 				if err != nil {
-					fmt.Println(err)
 					continue
 				}
 
-				buf := make([]byte, consts.ProxyPayloadSize)
-				n, err := conn.Read(buf)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-
-				respMsg <- types.Message{Id: req.Id, Msg: buf[:n], Type: types.MessageTypeResponse}
+				// buf := make([]byte, consts.ProxyPayloadSize)
+				// n, err := conn.Read(buf)
+				// if err != nil {
+				// 	fmt.Println(err)
+				// 	return
+				// }
+				//
+				// respMsg <- types.Message{Id: req.Id, Msg: buf[:n], Type: types.MessageTypeResponse}
 			}
 
 		}

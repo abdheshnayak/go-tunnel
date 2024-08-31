@@ -38,47 +38,60 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 			continue
 		}
 
-		go func(conn net.Conn) {
-			defer conn.Close()
+		go func() {
+			go func(conn net.Conn) {
+				defer conn.Close()
 
-			go func() {
-				buf := make([]byte, consts.ProxyPayloadSize)
-				n, err := conn.Read(buf)
-				if err != nil {
-					fmt.Println(err)
-					if err == io.EOF {
-						return
-					}
-					return
-				}
-
-				fmt.Println("received request from: ", conn.RemoteAddr().String())
-				conns[conn.RemoteAddr().String()] = conn
-				send <- types.Message{Id: conn.RemoteAddr().String(), Msg: buf[:n], Type: types.MessageTypeRequest}
-			}()
-
-			for {
-				select {
-				case msg := <-receive:
-					if msg.Type != types.MessageTypeResponse {
-						continue
-					}
-
-					conn, ok := conns[msg.Id]
-					if !ok {
-						fmt.Println("connection not found")
-						continue
-					}
-
-					fmt.Println("sending response to: ", msg.Id)
-					_, err := conn.Write([]byte(msg.Msg))
+				go func() {
+					buf := make([]byte, consts.ProxyPayloadSize)
+					n, err := conn.Read(buf)
 					if err != nil {
 						fmt.Println(err)
-						continue
+						if err == io.EOF {
+							return
+						}
+						return
 					}
 
+					fmt.Println("received request from: ", conn.RemoteAddr().String())
+					conns[conn.RemoteAddr().String()] = conn
+					send <- types.Message{Id: conn.RemoteAddr().String(), Msg: buf[:n], Type: types.MessageTypeRequest}
+				}()
+
+				for {
+					select {
+					case msg := <-receive:
+						switch msg.Type {
+						case types.MessageTypeResponse:
+							conn, ok := conns[msg.Id]
+							if !ok {
+								fmt.Println("connection not found")
+								continue
+							}
+
+							fmt.Println("sending response to: ", msg.Id)
+							_, err := conn.Write([]byte(msg.Msg))
+							if err != nil {
+								fmt.Println(err)
+								continue
+							}
+						case types.MessageTypeClose:
+							if c, ok := conns[msg.Id]; ok {
+								c.Close()
+							}
+							// delete(conns, msg.Id)
+
+						default:
+							continue
+						}
+						if msg.Type != types.MessageTypeResponse {
+							continue
+						}
+
+					}
 				}
-			}
-		}(conn)
+			}(conn)
+		}()
+
 	}
 }
