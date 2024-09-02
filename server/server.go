@@ -29,7 +29,7 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 
 	defer l.Close()
 
-	conns := make(map[string]net.Conn)
+	conns := make(map[string]net.Conn, 100)
 
 	for {
 		conn, err := l.Accept()
@@ -48,13 +48,13 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 					if err != nil {
 						fmt.Println(err)
 						if err == io.EOF {
-							fmt.Println("connection closed")
-							conn.Close()
+							fmt.Println("eof found while reading proxy client")
 							return
 						}
 						return
 					}
 
+					fmt.Println("<--[p]", conn.RemoteAddr().String(), string(buf[:n]))
 					conns[conn.RemoteAddr().String()] = conn
 					send <- types.Message{Id: conn.RemoteAddr().String(), Msg: buf[:n], Type: types.MessageTypeRequest}
 				}
@@ -62,35 +62,31 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 
 			for {
 				msg := <-receive
+				fmt.Println("-->[p]", msg.Id, msg.Type, string(msg.Msg))
 
-				fmt.Println("msg2:", msg.Id, msg.Type, string(msg.Msg))
-
-				func() {
-					defer mu.Unlock()
-					switch msg.Type {
-					case types.MessageTypeResponse:
-						conn, ok := conns[msg.Id]
-						if !ok {
-							fmt.Println("connection not found")
-							return
-						}
-
-						_, err := conn.Write([]byte(msg.Msg))
-						if err != nil {
-							fmt.Println(err, "msg:", string(msg.Msg))
-							return
-						}
-					case types.MessageTypeClose:
-						fmt.Println("closing connection: ", msg.Id)
-						if c, ok := conns[msg.Id]; ok {
-							c.Close()
-						}
-						delete(conns, msg.Id)
-
-					default:
+				switch msg.Type {
+				case types.MessageTypeResponse:
+					conn, ok := conns[msg.Id]
+					if !ok {
+						fmt.Println("connection not found")
 						return
 					}
-				}()
+
+					_, err := conn.Write([]byte(msg.Msg))
+					if err != nil {
+						fmt.Println(err, "msg:", string(msg.Msg))
+						return
+					}
+				case types.MessageTypeClose:
+					fmt.Println("closing connection: ", msg.Id)
+					if c, ok := conns[msg.Id]; ok {
+						c.Close()
+					}
+					delete(conns, msg.Id)
+
+				default:
+					return
+				}
 
 			}
 		}(conn)

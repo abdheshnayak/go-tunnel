@@ -4,18 +4,21 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sync"
+	// "sync"
 	"time"
 
-	"proxy.io/consts"
+	// json "encoding/json"
+	// json "encoding/gob"
+	json "github.com/vmihailenco/msgpack/v5"
+
 	"proxy.io/types"
 )
 
-var mu sync.Mutex
+// var mu sync.Mutex
 
 func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Listener, error) {
-	send := make(chan types.Message)
-	receive := make(chan types.Message)
+	send := make(chan types.Message, 100)
+	receive := make(chan types.Message, 100)
 
 	listener, err := net.Listen("tcp", *serverAddr)
 	if err != nil {
@@ -55,11 +58,12 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 	go func(ctx *Context) {
 		for {
 			msg := <-send
-			data, err := msg.Bytes()
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
+
+			// data, err := msg.Bytes()
+			// if err != nil {
+			// 	fmt.Println(err)
+			// 	continue
+			// }
 
 			if ctx.conn == nil {
 				fmt.Println("write connection is nil")
@@ -67,19 +71,13 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
-			// make buffer of size payload size
-			buf := make([]byte, consts.PayloadSize)
-
-			// copy data to buffer
-			copy(buf, data)
-
-			_, err = ctx.conn.Write(buf)
-			if err != nil {
-				fmt.Println(err)
-				return
+			e := json.NewEncoder(ctx.conn)
+			if err = e.Encode(&msg); err != nil {
+				fmt.Println("error while encoding message", err)
+				continue
 			}
 
-			fmt.Println("sent message for: ", msg.Id)
+			fmt.Println("-->[c]", msg.Id, msg.Type, string(msg.Msg))
 		}
 	}(&mctx)
 
@@ -91,28 +89,22 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
-			buf := make([]byte, consts.PayloadSize)
-			n, err := ctx.conn.Read(buf)
+			d := json.NewDecoder(ctx.conn)
+			var msg types.Message
+			err := d.Decode(&msg)
 			if err != nil {
 				if err == io.EOF {
-					fmt.Println("connection closed")
+					fmt.Println("eof found while reading main client")
+					ctx.conn.Close()
 					ctx.conn = nil
+					continue
 				}
-
-				fmt.Println(err, "read error")
+				fmt.Println("error while decoding message", err)
 				continue
 			}
 
-			var msg types.Message
-			err = msg.FromBytes(buf[:n])
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			mu.Lock()
-			fmt.Println("msg1:", msg.Id, msg.Type, string(msg.Msg))
-
+			// mu.Lock()
+			fmt.Println("<--[c]", msg.Id, msg.Type, string(msg.Msg))
 			receive <- msg
 		}
 	}(&mctx)

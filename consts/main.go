@@ -1,6 +1,6 @@
 package consts
 
 const (
-	PayloadSize      = 4096
-	ProxyPayloadSize = 1024
+	// PayloadSize      = 2096
+	ProxyPayloadSize = 2024
 )

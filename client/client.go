@@ -22,24 +22,26 @@ func Run(ctx types.Context) error {
 		return err
 	}
 
-	for {
-		select {
-		case response := <-respMsg:
-			fmt.Println("send:", response.Id, response.Type, string(response.Msg))
+	go func() {
+		for {
+			response := <-respMsg
+			fmt.Println("-->[c]", response.Id, response.Type, string(response.Msg))
 			send <- response
-		case msg := <-receive:
-			// fmt.Println("rc message from: ", string(msg.Id))
-			fmt.Println("received:", msg.Id, msg.Type, string(msg.Msg))
-			reqMsg <- msg
 		}
+	}()
+
+	for {
+		msg := <-receive
+		fmt.Println("<--[c]", msg.Id, msg.Type, string(msg.Msg))
+		reqMsg <- msg
 	}
 }
 
 func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.Message) (chan types.Message, chan types.Message, error) {
 
-	readConn := make(chan types.Message)
-	reqMsg := make(chan types.Message)
-	respMsg := make(chan types.Message)
+	readConn := make(chan types.Message, 100)
+	reqMsg := make(chan types.Message, 100)
+	respMsg := make(chan types.Message, 100)
 
 	dials := make(map[string]net.Conn)
 
@@ -80,12 +82,11 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 						n, err := c.Read(buf)
 						if err != nil {
 							if err == io.EOF {
-								buf = make([]byte, consts.ProxyPayloadSize)
 								fmt.Println("connection closed, eof")
 
-								time.After(time.Second)
+								time.Sleep(time.Millisecond * 100)
 								respMsg <- types.Message{Id: msg.Id, Msg: []byte("error"), Type: types.MessageTypeClose}
-								time.After(time.Second)
+								time.Sleep(time.Millisecond * 100)
 								return
 							}
 
@@ -112,7 +113,7 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 
 				readConn <- req
 
-				_, err = conn.Write([]byte(req.Msg))
+				_, err = conn.Write(req.Msg)
 				if err != nil {
 					continue
 				}
