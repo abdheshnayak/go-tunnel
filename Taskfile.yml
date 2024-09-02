@@ -11,8 +11,8 @@ tasks:
 
   run:
     cmds:
-      - ./bin/app -mode=client -proxyAddr=localhost:1234 -serverAddr=gcp-dev.kloudlite.io:32000
-      # - ./bin/app -mode=client -proxyAddr=192.168.13.254:4455 -serverAddr=gcp-dev.kloudlite.io:32000
+      # - ./bin/app -mode=client -proxyAddr=localhost:1234 -serverAddr=gcp-dev.kloudlite.io:32000
+      - ./bin/app -mode=client -proxyAddr=192.168.13.254:4455 -serverAddr=gcp-dev.kloudlite.io:32000
 
   local:
     cmds:

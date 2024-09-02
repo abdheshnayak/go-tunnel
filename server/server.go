@@ -38,16 +38,18 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 			continue
 		}
 
-		go func() {
-			go func(conn net.Conn) {
-				defer conn.Close()
+		go func(conn net.Conn) {
+			defer conn.Close()
 
-				go func() {
+			go func() {
+				for {
 					buf := make([]byte, consts.ProxyPayloadSize)
 					n, err := conn.Read(buf)
 					if err != nil {
 						fmt.Println(err)
 						if err == io.EOF {
+							fmt.Println("connection closed")
+							conn.Close()
 							return
 						}
 						return
@@ -55,40 +57,42 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 
 					conns[conn.RemoteAddr().String()] = conn
 					send <- types.Message{Id: conn.RemoteAddr().String(), Msg: buf[:n], Type: types.MessageTypeRequest}
-				}()
+				}
+			}()
 
-				for {
-					msg := <-receive
+			for {
+				msg := <-receive
 
+				fmt.Println("msg2:", msg.Id, msg.Type, string(msg.Msg))
+
+				func() {
+					defer mu.Unlock()
 					switch msg.Type {
 					case types.MessageTypeResponse:
 						conn, ok := conns[msg.Id]
 						if !ok {
 							fmt.Println("connection not found")
-							continue
+							return
 						}
 
 						_, err := conn.Write([]byte(msg.Msg))
 						if err != nil {
-							fmt.Println(err)
-							continue
+							fmt.Println(err, "msg:", string(msg.Msg))
+							return
 						}
 					case types.MessageTypeClose:
 						fmt.Println("closing connection: ", msg.Id)
 						if c, ok := conns[msg.Id]; ok {
 							c.Close()
 						}
-						// delete(conns, msg.Id)
+						delete(conns, msg.Id)
 
 					default:
-						continue
+						return
 					}
-					if msg.Type != types.MessageTypeResponse {
-						continue
-					}
+				}()
 
-				}
-			}(conn)
-		}()
+			}
+		}(conn)
 	}
 }

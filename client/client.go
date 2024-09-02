@@ -25,10 +25,11 @@ func Run(ctx types.Context) error {
 	for {
 		select {
 		case response := <-respMsg:
-			// fmt.Println("sent message to: ", string(response.Id))
+			fmt.Println("send:", response.Id, response.Type, string(response.Msg))
 			send <- response
 		case msg := <-receive:
 			// fmt.Println("rc message from: ", string(msg.Id))
+			fmt.Println("received:", msg.Id, msg.Type, string(msg.Msg))
 			reqMsg <- msg
 		}
 	}

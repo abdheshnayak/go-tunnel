@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"proxy.io/consts"
 	"proxy.io/types"
 )
+
+var mu sync.Mutex
 
 func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Listener, error) {
 	send := make(chan types.Message)
@@ -63,7 +66,14 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				time.Sleep(1 * time.Second)
 				continue
 			}
-			_, err = ctx.conn.Write(data)
+
+			// make buffer of size payload size
+			buf := make([]byte, consts.PayloadSize)
+
+			// copy data to buffer
+			copy(buf, data)
+
+			_, err = ctx.conn.Write(buf)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -100,7 +110,9 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
-			fmt.Println("received message for: ", msg.Id)
+			mu.Lock()
+			fmt.Println("msg1:", msg.Id, msg.Type, string(msg.Msg))
+
 			receive <- msg
 		}
 	}(&mctx)
