@@ -2,9 +2,9 @@ package client
 
 import (
 	// json "encoding/json"
-	// json "encoding/gob"
+	json "encoding/gob"
 	"fmt"
-	json "github.com/vmihailenco/msgpack/v5"
+	// json "github.com/vmihailenco/msgpack/v5"
 	"io"
 	"net"
 	"sync"
@@ -37,7 +37,6 @@ func Dial(serverAddr *string) (chan types.Message, chan types.Message, net.Conn,
 
 	go func() {
 		for {
-
 			d := json.NewDecoder(conn)
 
 			var msg types.Message

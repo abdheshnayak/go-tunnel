@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -54,9 +55,11 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 						return
 					}
 
-					fmt.Println("<--[p]", conn.RemoteAddr().String(), string(buf[:n]))
+					encoded := base64.StdEncoding.EncodeToString(buf[:n])
+					fmt.Println("<--[p]", conn.RemoteAddr().String(), encoded)
 					conns[conn.RemoteAddr().String()] = conn
-					send <- types.Message{Id: conn.RemoteAddr().String(), Msg: buf[:n], Type: types.MessageTypeRequest}
+
+					send <- types.Message{Id: conn.RemoteAddr().String(), Msg: encoded, Type: types.MessageTypeRequest}
 				}
 			}()
 
@@ -72,8 +75,13 @@ func ProxyListener(ctx types.Context, send chan types.Message, receive chan type
 						return
 					}
 
-					_, err := conn.Write([]byte(msg.Msg))
+					data, err := base64.StdEncoding.DecodeString(msg.Msg)
 					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+
+					if _, err := conn.Write(data); err != nil {
 						fmt.Println(err, "msg:", string(msg.Msg))
 						return
 					}

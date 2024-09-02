@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net"
+
 	// "sync"
 	"time"
 
 	// json "encoding/json"
-	// json "encoding/gob"
-	json "github.com/vmihailenco/msgpack/v5"
+	json "encoding/gob"
+	// json "github.com/vmihailenco/msgpack/v5"
 
 	"proxy.io/types"
 )
@@ -72,6 +73,7 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 			}
 
 			e := json.NewEncoder(ctx.conn)
+
 			if err = e.Encode(&msg); err != nil {
 				fmt.Println("error while encoding message", err)
 				continue

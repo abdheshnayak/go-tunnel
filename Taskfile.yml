@@ -16,8 +16,8 @@ tasks:
 
   local:
     cmds:
-      # - ./bin/app -mode=client -proxyAddr=192.168.157.254:4455
-      - ./bin/app -mode=client -proxyAddr=localhost:1234
+      - ./bin/app -mode=client -proxyAddr=192.168.157.254:4455
+      # - ./bin/app -mode=client -proxyAddr=localhost:1234
   server:
     cmds:
       - ./bin/app -mode=server -proxyAddr=:4456

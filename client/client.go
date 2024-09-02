@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -85,7 +86,7 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 								fmt.Println("connection closed, eof")
 
 								time.Sleep(time.Millisecond * 100)
-								respMsg <- types.Message{Id: msg.Id, Msg: []byte("error"), Type: types.MessageTypeClose}
+								respMsg <- types.Message{Id: msg.Id, Msg: "error", Type: types.MessageTypeClose}
 								time.Sleep(time.Millisecond * 100)
 								return
 							}
@@ -93,7 +94,8 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 							continue
 						}
 
-						respMsg <- types.Message{Id: msg.Id, Msg: buf[:n], Type: types.MessageTypeResponse}
+						encoded := base64.StdEncoding.EncodeToString(buf[:n])
+						respMsg <- types.Message{Id: msg.Id, Msg: encoded, Type: types.MessageTypeResponse}
 					}
 				}()
 			}
@@ -113,7 +115,13 @@ func ProxyDialer(ctx types.Context, send chan types.Message, receive chan types.
 
 				readConn <- req
 
-				_, err = conn.Write(req.Msg)
+				data, err := base64.StdEncoding.DecodeString(req.Msg)
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
+
+				_, err = conn.Write(data)
 				if err != nil {
 					continue
 				}

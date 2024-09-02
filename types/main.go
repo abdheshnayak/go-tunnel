@@ -28,7 +28,7 @@ type Context struct {
 
 type Message struct {
 	Id   string
-	Msg  []byte
+	Msg  string
 	Type MessageType
 }
 
