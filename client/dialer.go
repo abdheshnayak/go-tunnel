@@ -1,15 +1,17 @@
 package client
 
 import (
-	// json "encoding/json"
-	json "encoding/gob"
+	json "encoding/json"
+	// json "encoding/gob"
 	"fmt"
+
 	// json "github.com/vmihailenco/msgpack/v5"
 	"io"
 	"net"
 	"sync"
 	"time"
 
+	// "proxy.io/consts"
 	"proxy.io/types"
 )
 
@@ -69,8 +71,6 @@ func Dial(serverAddr *string) (chan types.Message, chan types.Message, net.Conn,
 			//
 			// 	continue
 			// }
-			//
-			// fmt.Println("received message from: ", len(buf), n)
 			//
 			// var msg types.Message
 			// err = msg.FromBytes(buf[:n])

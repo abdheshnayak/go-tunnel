@@ -8,8 +8,8 @@ import (
 	// "sync"
 	"time"
 
-	// json "encoding/json"
-	json "encoding/gob"
+	json "encoding/json"
+	// json "encoding/gob"
 	// json "github.com/vmihailenco/msgpack/v5"
 
 	"proxy.io/types"
@@ -79,6 +79,30 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				continue
 			}
 
+			// data, err := msg.Bytes()
+			// if err != nil {
+			// 	fmt.Println(err)
+			// 	continue
+			// }
+			//
+			// if ctx.conn == nil {
+			// 	fmt.Println("write connection is nil")
+			// 	time.Sleep(1 * time.Second)
+			// 	continue
+			// }
+
+			// make buffer of size payload size
+			// buf := make([]byte, consts.PayloadSize)
+			//
+			// // copy data to buffer
+			// copy(buf, data)
+			//
+			// _, err = ctx.conn.Write(buf)
+			// if err != nil {
+			// 	fmt.Println(err)
+			// 	return
+			// }
+
 			fmt.Println("-->[c]", msg.Id, msg.Type, string(msg.Msg))
 		}
 	}(&mctx)
@@ -104,6 +128,27 @@ func Listen(serverAddr *string) (chan types.Message, chan types.Message, net.Lis
 				fmt.Println("error while decoding message", err)
 				continue
 			}
+
+			// buf := make([]byte, consts.PayloadSize)
+			// n, err := ctx.conn.Read(buf)
+			// if err != nil {
+			// 	if err == io.EOF {
+			// 		fmt.Println("eof found while reading main client")
+			// 		ctx.conn.Close()
+			// 		ctx.conn = nil
+			// 		continue
+			// 	}
+			//
+			// 	fmt.Println(err, "read error")
+			// 	continue
+			// }
+			//
+			// var msg types.Message
+			// err = msg.FromBytes(buf[:n])
+			// if err != nil {
+			// 	fmt.Println(err)
+			// 	continue
+			// }
 
 			// mu.Lock()
 			fmt.Println("<--[c]", msg.Id, msg.Type, string(msg.Msg))
